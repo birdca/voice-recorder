@@ -1,30 +1,51 @@
 const express = require('express');
 const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
+const path = require('path'); // Add this!
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.use(cors());
 
-// Auto-create 'uploads' folder if it doesn't exist
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) { fs.mkdirSync(uploadDir); }
-
-// Setup how files are saved
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, 'uploads/'),
-    filename: (req, file, cb) => cb(null, `voice_${Date.now()}.webm`)
+// Configure Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'voice-notes',
+        resource_type: 'video',
+    },
+});
+
 const upload = multer({ storage: storage });
 
-app.use(cors());
-app.use(express.static('public')); // This tells the server where the website is
-
-// The route that receives the audio
-app.post('/upload', upload.single('voiceNote'), (req, res) => {
-    console.log(`Received: ${req.file.filename}`);
-    res.status(200).json({ message: "Successfully saved to server!" });
+// VERCEL FIX: Manually serve the index.html for the home route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => console.log(`Server live at http://localhost:${PORT}`));
+// Also keep this to serve CSS/JS if you add any later
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.post('/upload', upload.single('voiceNote'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).send('No file uploaded.');
+    }
+    res.status(200).json({
+        message: "Sent to Cloud!",
+        url: req.file.path
+    });
+});
+
+// For Vercel, we don't strictly need app.listen, but it doesn't hurt.
+// The export is what matters most.
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+module.exports = app;
