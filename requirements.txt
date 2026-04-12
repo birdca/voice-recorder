@@ -1,3 +1,6 @@
 fastapi
 SpeechRecognition
 requests
+google-generativeai
+python-dotenv
+pydantic
