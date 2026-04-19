@@ -5,9 +5,7 @@
     { "src": "api/index.py", "use": "@vercel/python" }
   ],
   "functions": {
-    "server.js": {
-      "includeFiles": "public/**"
-    }
+    "server.js": { "includeFiles": "public/**" }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.py" },
